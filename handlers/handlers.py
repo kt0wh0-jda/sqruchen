@@ -3,22 +3,31 @@ from aiogram.utils.formatting import (
     Bold, as_list, as_marked_section, as_key_value, HashTag
 )
 from aiogram import Router, types, F
-from aiogram.types import Message
-from aiogram.filters import Command
+from aiogram.types import Message, ContentType
+from aiogram.filters import Command, BaseFilter
 
-from random import randint
+import random
 from asyncio import sleep
 
-
+from db import *
 from generating import *
 from data import *
 from keyboards import inline_kb_tapgame
-
+from config import ADMINS
 router = Router()
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer(text=f'тише')
+
+
+class CatFilter(BaseFilter): # Используйте BaseFilter вместо Filter
+    def __init__(self): # Добавляем пустой __init__
+        pass
+
+    async def __call__(self, message: Message) -> bool: # Используйте __call__ вместо call
+        processed_text = (await del_repetitions(message.text.upper()))
+        return "КОТ" in processed_text
 
 
 @router.message(Command(commands='help')) 
@@ -27,10 +36,65 @@ async def cmd_start(message: Message):
         as_marked_section(
             Bold("Заклинания.. некоторые"),
             "/hru <целое число> - что-то будет...",
+            "/all_stat - покажу закрома",
+            "/set_name <имя> - изменю ваше имя"
         ),
         sep="\n",
     )
     await message.answer(**content.as_kwargs())
+
+
+@router.message(Command(commands='add_user'))
+async def add_user_to_db(message: Message):
+    await add_user(999, 'тестовый', 999)
+    await message.answer(text='Юзер добавлен фуух')
+    
+
+@router.message(Command(commands='my_stat'))
+async def get_my_stat(message: Message):
+    await get_taps_stat(message)
+
+
+@router.message(Command(commands='all_stat'))
+async def show_data(message: Message):
+    """Обработчик команды /show_db. Отправляет данные из базы данных в чат."""
+    data = await get_all_data()  # Получаем данные из базы данных
+    sorted_data = sorted(data, key=lambda x: x[2],reverse=True)
+    if data:
+        txt = 'Статистика:\n\n'
+        for user_id, username, taps_stat in sorted_data:
+            txt += f"{username} - {taps_stat}\n"
+        await message.answer(text=txt)
+    else:
+        await message.answer(text='База данных пуста.')
+
+
+@router.message(Command(commands='delete_user'))
+async def del_user(message: Message, command: CommandObject):
+    if message.from_user.id in ADMINS:
+        user_id= command.args
+    try:
+        await delete_user(user_id)
+    except:
+        await print('что-то не так')
+
+
+
+@router.message(Command(commands='del_reps'))
+async def del_reps(message: Message, command: CommandObject):
+    try:
+        await message.answer(f'{await del_repetitions(text=command.args)}')
+    except:
+        await message.answer('что-то не так')
+
+
+@router.message(Command(commands='set_name'))
+async def set_new_name(message: Message, command: CommandObject):
+
+    arg = command.args
+    users_ID = message.from_user.id
+
+    await set_name(users_ID, arg, message)
 
 
 @router.message(Command(prefix='!', commands=['multy', 'm']))
@@ -40,7 +104,7 @@ async def test(message: Message, command: CommandObject):
         await multyMessage(msg=message, times=int(times), word=phrase)
 
 
-@router.message(F.text.upper().contains('ТАПАТЬ'))
+@router.message(F.text.upper().in_(tapping_filter))
 async def tap_game(message:Message):
     await message.answer(text='нукась', reply_markup=inline_kb_tapgame)
 
@@ -53,7 +117,11 @@ async def process_callback(callback_query: types.CallbackQuery):
     elif callback_query.data == 'forward':
         await callback_query.message.edit_text('нихуяешеньки тута()')
     elif callback_query.data == 'tapped':
-        await callback_query.message.answer(text='cool')
+        users_ID = callback_query.from_user.id
+        fname = callback_query.from_user.first_name
+
+        await start_count(users_ID, fname)
+        await increment_taps(users_ID)
 
 @router.message(F.text.upper().contains('УНИЧТОЖИТЬ'))
 async def how_are_you(message: Message):
@@ -64,35 +132,28 @@ async def how_are_you(message: Message):
 
 
 @router.message(F.text.upper().contains('ПАЛЬЧИК'))
-async def yes_sir(message: Message):
+async def palchik(message: Message):
     if message.chat.id == BUTOVO:
-        if message.from_user.id == 893693230:
+        if message.from_user.id in ADMINS:
             await message.answer_sticker(finger)
 
 
-@router.message(F.text.upper().contains('ЖОПА'))
-async def yes_sir(message: Message):
-    if message.chat.id == BUTOVO:
-        await message.answer_sticker(jopa)
+@router.message((F.text.upper() == 'ЖОПА') & (F.chat.id == BUTOVO))
+async def jops(message: Message):
+    await message.answer_sticker(jopa)
 
 
-@router.message(F.text.upper().contains('КОТ'))
-async def yes_sir(message: Message):
-    cats = [tima, musya, leo, kooot]
-    a = randint(0, 3)
-    await message.answer_sticker(cats[a])
-
-
-@router.message(F.text == 'мяу для скрюченого')
-async def yes_sir(message: Message):
-    if message.from_user.id == 893693230:
-        await message.answer(text='где арахисы там и зима. мартамяу')
+#КООООООООООТ
+@router.message(CatFilter())
+async def caaaaat(message: Message):
+    random_cat = random.choice(cats) 
+    await message.answer_sticker(random_cat)
 
 
 @router.message()
 async def sad_message(message: types.Message):
-    a = randint(1, 100)
-    if a <= 4:
+    a = random.randint(1, 100)
+    if a <= 3:
         await message.answer('жаль')
     elif a == 5 and message.chat.id == BUTOVO:
         await message.answer_sticker(creep_tf)
