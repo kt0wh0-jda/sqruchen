@@ -10,7 +10,7 @@ from aiogram.filters import CommandStart, CommandObject, Command
 
 from config import TOKEN, DB_NAME
 from handlers.handlers import router
-from generating import *
+from tools import *
 from db import create_table
 
 bot = Bot(token=TOKEN)

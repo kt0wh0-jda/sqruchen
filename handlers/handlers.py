@@ -10,7 +10,7 @@ import random
 from asyncio import sleep
 
 from db import *
-from generating import *
+from tools import *
 from data import *
 from keyboards import inline_kb_tapgame
 from config import ADMINS
