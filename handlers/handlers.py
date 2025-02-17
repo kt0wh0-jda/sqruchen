@@ -9,7 +9,7 @@ from aiogram.filters import Command, BaseFilter
 import random
 from asyncio import sleep
 
-from db import *
+from db.taps_db import *
 from tools import *
 from data import *
 from keyboards import inline_kb_tapgame
@@ -21,14 +21,19 @@ async def cmd_start(message: Message):
     await message.answer(text=f'тише')
 
 
-class CatFilter(BaseFilter): # Используйте BaseFilter вместо Filter
+class CatFilter(BaseFilter):
     def __init__(self): # Добавляем пустой __init__
         pass
 
     async def __call__(self, message: Message) -> bool: # Используйте __call__ вместо call
-        processed_text = (await del_repetitions(message.text.upper()))
-        return "КОТ" in processed_text
-
+        if message.text :
+            processed_text = await del_repetitions(message.text.upper())
+            for char_ in ['0', 'O', '(О)', '<>', '()', '( )', '%', '°']:
+                processed_text = processed_text.replace(char_, 'О')
+            processed_text = processed_text.replace('K', 'К')
+            processed_text = processed_text.replace('T', 'Т')
+            return "КОТ" in (await del_repetitions(processed_text))
+        return ""
 
 @router.message(Command(commands='help')) 
 async def cmd_start(message: Message):
@@ -79,7 +84,6 @@ async def del_user(message: Message, command: CommandObject):
         await print('что-то не так')
 
 
-
 @router.message(Command(commands='del_reps'))
 async def del_reps(message: Message, command: CommandObject):
     try:
@@ -123,6 +127,7 @@ async def process_callback(callback_query: types.CallbackQuery):
         await start_count(users_ID, fname)
         await increment_taps(users_ID)
 
+
 @router.message(F.text.upper().contains('УНИЧТОЖИТЬ'))
 async def how_are_you(message: Message):
     if message.chat.id == BUTOVO:
@@ -150,13 +155,7 @@ async def caaaaat(message: Message):
     await message.answer_sticker(random_cat)
 
 
-@router.message()
-async def sad_message(message: types.Message):
-    a = random.randint(1, 100)
-    if a <= 3:
-        await message.answer('жаль')
-    elif a == 5 and message.chat.id == BUTOVO:
-        await message.answer_sticker(creep_tf)
+
 
 
 # @router.message()

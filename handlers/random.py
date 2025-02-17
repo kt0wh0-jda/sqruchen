@@ -9,13 +9,16 @@ from aiogram.filters import Command, BaseFilter
 import random
 from asyncio import sleep
 
-from db.ye_db import *
 from tools import *
 from data import *
 from keyboards import inline_kb_tapgame
 from config import ADMINS
-spells_router = Router()
+random_router = Router()
 
-@spells_router.message(F.text.__eq__('-<>-'))
-async def feel_energy(message: Message):
-    await message.answer(text='энергия течёт...')
+@random_router.message()
+async def sad_message(message: types.Message):
+    a = random.randint(1, 100)
+    if a <= 3:
+        await message.answer('жаль')
+    elif a == 5 and message.chat.id == BUTOVO:
+        await message.answer_sticker(creep_tf)

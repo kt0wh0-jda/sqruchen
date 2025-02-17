@@ -8,10 +8,14 @@ from aiogram.types import Message
 from aiogram.methods.set_message_reaction import SetMessageReaction
 from aiogram.filters import CommandStart, CommandObject, Command
 
-from config import TOKEN, DB_NAME
+from config import TOKEN, TAPS_DB
+
 from handlers.handlers import router
+from handlers.spells import spells_router
+from handlers.random import random_router
+
 from tools import *
-from db import create_table
+from db.taps_db import create_table
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -54,10 +58,12 @@ async def test(message: Message, command: CommandObject):
 
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(TAPS_DB) as db:
         # Создаем таблицу в базе данных, если она еще не существует
         await create_table()
     dp.include_router(router)
+    dp.include_router(spells_router)
+    dp.include_router(random_router)
     await dp.start_polling(bot)
 
 
